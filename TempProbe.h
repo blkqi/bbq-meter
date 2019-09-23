@@ -6,25 +6,12 @@
  #define ADC_OHM_VALUE 2.2e4
 
  class TempProbe {
- private:
-   struct SteinhartCoefficients {
-     float A, B, C;
-   };
-
+ public:
    typedef enum {
      STATUS_NONE,
      STATUS_OK,
    } temp_status_t;
 
-   int _pin;
-   float _temp;
-   float _tempAvg;
-   bool _hasAvg;
-   float _offset;
-   temp_status_t _status;
-   SteinhartCoefficients _s = {7.3431401e-4, 2.1574370e-4, 9.5156860e-8};
-
- public:
    TempProbe(const unsigned char pin);
 
    void Process();
@@ -37,6 +24,19 @@
    void calcTempAvg();
    void setTemp(const float temp);
    void setStatus(const temp_status_t status);
+
+ private:
+   struct SteinhartCoefficients {
+     float A, B, C;
+   };
+
+   int _pin;
+   float _temp;
+   float _tempAvg;
+   bool _hasAvg;
+   float _offset;
+   temp_status_t _status;
+   SteinhartCoefficients _s = {7.3431401e-4, 2.1574370e-4, 9.5156860e-8};
  };
 
  TempProbe::TempProbe(const unsigned char pin) :
@@ -73,6 +73,10 @@
 
  float TempProbe::getTempAvg() {
    return _tempAvg;
+ }
+
+TempProbe::temp_status_t TempProbe::getStatus() {
+   return _status;
  }
 
  void TempProbe::calcTemp() {

@@ -12,27 +12,41 @@ ELClientMqtt mqtt(&esp);
 
 struct MetaProbe {
   TempProbe sensor;
-  String topic;
+  String topicValue;
+  String topicStatus;
 };
 
 const size_t probesLen = 4;
 MetaProbe probes[probesLen] = {
-  {TempProbe(A0), "smoker/probe/1/temp"},
-  {TempProbe(A1), "smoker/probe/2/temp"},
-  {TempProbe(A2), "smoker/probe/3/temp"},
-  {TempProbe(A3), "smoker/probe/4/temp"},
+  {TempProbe(A0), "smoker/probe/1/temp", "smoker/probe/1/status"},
+  {TempProbe(A1), "smoker/probe/2/temp", "smoker/probe/2/status"},
+  {TempProbe(A2), "smoker/probe/3/temp", "smoker/probe/3/status"},
+  {TempProbe(A3), "smoker/probe/4/temp", "smoker/probe/4/status"},
 };
 
 void publishProbe(MetaProbe *probe) {
-  const String value = String(probe->sensor.getTempAvg());
-  const String topic = probe->topic;
-  if (DEBUG) {
-    Serial.print(topic);
-    Serial.print(" -> ");
-    Serial.print(value);
-    Serial.println();
+  String value;
+  String status;
+  switch (probe->sensor.getStatus()) {
+    case TempProbe::STATUS_OK:
+      value = String(probe->sensor.getTempAvg());
+      if (DEBUG) {
+        Serial.print(probe->topicValue);
+        Serial.print(" -> ");
+        Serial.print(value);
+        Serial.println();
+      }
+      mqtt.publish(probe->topicValue.c_str(), value.c_str());
+      status = "OK";
+      break;
+    case TempProbe::STATUS_NONE:
+      status = "NONE";
+      break;
+    default:
+      status = "ERROR";
+      break;
   }
-  mqtt.publish(topic.c_str(), value.c_str());
+  mqtt.publish(probe->topicStatus.c_str(), status.c_str());
 }
 
 void wifiCb(void* response) {
@@ -55,6 +69,7 @@ bool connected;
 // Callback when MQTT is connected
 void mqttConnected(void* response) {
   Serial.println("MQTT connected!");
+  mqtt.publish("smoker/availability", "online");
   connected = true;
 }
 
@@ -88,6 +103,7 @@ void setup() {
   mqtt.disconnectedCb.attach(mqttDisconnected);
   mqtt.publishedCb.attach(mqttPublished);
   mqtt.setup();
+  mqtt.lwt("smoker/availability", "offline");
 
   Serial.println("EL-MQTT ready");
 }
